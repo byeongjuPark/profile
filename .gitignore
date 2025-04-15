@@ -123,4 +123,8 @@ backend/src/main/resources/application-prod.yml
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Docker 설정 파일은 제외하지 않음
+!.dockerignore
+!Dockerfile 
