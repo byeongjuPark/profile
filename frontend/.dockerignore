@@ -1,0 +1,35 @@
+# 버전 관리
+.git
+.gitignore
+
+# 의존성
+node_modules
+npm-debug.log
+yarn-error.log
+
+# 개발 환경
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 빌드 출력
+.next
+out
+
+# 문서
+README.md
+CHANGELOG.md
+docs
+
+# 테스트
+__tests__
+coverage
+
+# 기타
+.DS_Store
+.idea
+.vscode
+*.log
+*.swp
+.editorconfig 
