@@ -42,6 +42,8 @@ const SocialSection: React.FC<SocialSectionProps> = ({ socials, isLoggedIn, onAd
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    console.log('소셜 링크 폼 데이터:', formData);
+
     if (editingId) {
       onUpdate({
         id: editingId,
@@ -50,9 +52,9 @@ const SocialSection: React.FC<SocialSectionProps> = ({ socials, isLoggedIn, onAd
       setEditingId(null)
     } else {
       onAdd({
-        id: "new",
+        id: "temp",
         ...formData,
-      })
+      } as Social)
     }
 
     resetForm()
@@ -97,142 +99,190 @@ const SocialSection: React.FC<SocialSectionProps> = ({ socials, isLoggedIn, onAd
   }
 
   return (
-    <section className="py-12 bg-white">
+    <section className="py-12 bg-gray-900">
       <div className="container mx-auto px-4 md:px-6">
-        <h2 className="text-2xl font-bold mb-6">Social Links</h2>
+        <div className="max-w-4xl mx-auto">
+          <div className="terminal-header w-max mx-auto mb-6 px-8 rounded-full">
+            <div className="terminal-dot terminal-dot-red"></div>
+            <div className="terminal-dot terminal-dot-yellow"></div>
+            <div className="terminal-dot terminal-dot-green"></div>
+            <code className="ml-4 text-sm text-gray-400">socials.config.js</code>
+          </div>
 
-        {socials && socials.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {socials.map((social) => (
-              <div key={social.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 flex items-center justify-center bg-blue-600 text-white rounded-full">
-                    {social.platform && socialIcons[social.platform.toLowerCase()] ? (
-                      socialIcons[social.platform.toLowerCase()]
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="font-medium text-gray-900">{social.platform || "Social Link"}</h3>
-                    <a href={social.url || "#"} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                      {social.url ? social.url.replace(/^https?:\/\//, "") : "No URL provided"}
-                    </a>
-                  </div>
-                </div>
-
-                {isLoggedIn && (
-                  <div className="flex space-x-2">
-                    <button onClick={() => startEditing(social)} className="p-1 text-gray-500 hover:text-blue-600 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button onClick={() => onDelete(social.id)} className="p-1 text-gray-500 hover:text-red-600 transition-colors">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+          {socials && socials.length > 0 ? (
+            <div className="terminal-card mb-6">
+              <div className="terminal-header">
+                <div className="terminal-dot terminal-dot-red"></div>
+                <div className="terminal-dot terminal-dot-yellow"></div>
+                <div className="terminal-dot terminal-dot-green"></div>
+                <span className="ml-2 font-mono text-xs text-gray-400">social.links.js</span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No social links added yet.</p>
-          </div>
-        )}
+              <div className="terminal-body p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {socials.map((social) => (
+                    <div key={social.id} className="flex items-center justify-between p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-cyan-700 transition-all">
+                      <div className="flex items-center overflow-hidden">
+                        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-700 text-cyan-400 rounded-full">
+                          {social.platform && socialIcons[social.platform.toLowerCase()] ? (
+                            socialIcons[social.platform.toLowerCase()]
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="ml-4 min-w-0 flex-1 overflow-hidden">
+                          <h3 className="font-medium text-gray-300 font-mono truncate">{social.platform || "Social Link"}</h3>
+                          <a href={social.url || "#"} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-400 hover:underline block truncate">
+                            {social.url ? social.url.replace(/^https?:\/\//, "") : "No URL provided"}
+                          </a>
+                        </div>
+                      </div>
 
-        {isLoggedIn && (
-          <div className="mt-8">
-            {isAddingNew ? (
-              <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="platform" className="block text-sm font-medium text-gray-700 mb-1">
-                      Platform
-                    </label>
-                    <input
-                      type="text"
-                      id="platform"
-                      name="platform"
-                      value={formData.platform}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                      required
-                      placeholder="Github, LinkedIn, etc."
-                    />
+                      {isLoggedIn && (
+                        <div className="flex space-x-2 flex-shrink-0 ml-2">
+                          <button onClick={() => startEditing(social)} className="p-1 text-gray-400 hover:text-cyan-400 transition-colors">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button onClick={() => onDelete(social.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="terminal-card mb-6">
+              <div className="terminal-header">
+                <div className="terminal-dot terminal-dot-red"></div>
+                <div className="terminal-dot terminal-dot-yellow"></div>
+                <div className="terminal-dot terminal-dot-green"></div>
+                <span className="ml-2 font-mono text-xs text-gray-400">empty.js</span>
+              </div>
+              <div className="terminal-body p-6">
+                <p className="text-gray-400 font-mono text-center">
+                  <span className="text-purple-400">const</span> socials = [];
+                  <span className="block mt-2 text-gray-500">// 소셜 링크가 아직 없습니다.</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isLoggedIn && (
+            <div className="mt-8 text-center">
+              {isAddingNew ? (
+                <div className="terminal-card">
+                  <div className="terminal-header">
+                    <div className="terminal-dot terminal-dot-red"></div>
+                    <div className="terminal-dot terminal-dot-yellow"></div>
+                    <div className="terminal-dot terminal-dot-green"></div>
+                    <span className="ml-2 font-mono text-xs text-gray-400">social.{editingId ? 'update' : 'add'}.js</span>
                   </div>
+                  <div className="terminal-body p-6">
+                    <form onSubmit={handleSubmit}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="platform" className="block text-sm font-mono text-gray-300 mb-1">
+                            <span className="text-purple-400">const</span> platform
+                          </label>
+                          <input
+                            type="text"
+                            id="platform"
+                            name="platform"
+                            value={formData.platform}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md shadow-sm text-gray-300 font-mono"
+                            required
+                            placeholder="Github, LinkedIn, etc."
+                          />
+                        </div>
 
-                  <div>
-                    <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                      URL
-                    </label>
-                    <input
-                      type="url"
-                      id="url"
-                      name="url"
-                      value={formData.url}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                      required
-                      placeholder="https://..."
-                    />
-                  </div>
+                        <div>
+                          <label htmlFor="url" className="block text-sm font-mono text-gray-300 mb-1">
+                            <span className="text-purple-400">const</span> url
+                          </label>
+                          <input
+                            type="url"
+                            id="url"
+                            name="url"
+                            value={formData.url}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md shadow-sm text-gray-300 font-mono"
+                            required
+                            placeholder="https://..."
+                          />
+                        </div>
 
-                  <div>
-                    <label htmlFor="icon" className="block text-sm font-medium text-gray-700 mb-1">
-                      Icon (optional)
-                    </label>
-                    <input
-                      type="text"
-                      id="icon"
-                      name="icon"
-                      value={formData.icon}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                      placeholder="Custom icon code or leave blank"
-                    />
+                        <div>
+                          <label htmlFor="icon" className="block text-sm font-mono text-gray-300 mb-1">
+                            <span className="text-purple-400">const</span> icon
+                          </label>
+                          <input
+                            type="text"
+                            id="icon"
+                            name="icon"
+                            value={formData.icon}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md shadow-sm text-gray-300 font-mono"
+                            placeholder="아이콘 코드 또는 비워두세요"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex space-x-3 justify-center">
+                        <button 
+                          type="submit" 
+                          className="px-4 py-2 font-mono text-sm text-black bg-green-500 rounded-md hover:bg-green-600 transition-colors"
+                        >
+                          {editingId ? "update()" : "add()"}
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={resetForm} 
+                          className="px-4 py-2 font-mono text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md hover:bg-gray-600 transition-colors"
+                        >
+                          cancel()
+                        </button>
+                      </div>
+                    </form>
                   </div>
                 </div>
-
-                <div className="mt-4 flex space-x-3">
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                    {editingId ? "Update" : "Add"} Social Link
-                  </button>
-                  <button type="button" onClick={resetForm} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <button onClick={() => setIsAddingNew(true)} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Social Link
-              </button>
-            )}
-          </div>
-        )}
+              ) : (
+                <button 
+                  onClick={() => setIsAddingNew(true)} 
+                  className="inline-flex items-center px-4 py-2 font-mono text-sm bg-gray-800 text-green-400 rounded-md hover:bg-gray-700 border border-gray-700 transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  social.add()
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )

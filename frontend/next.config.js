@@ -1,11 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
       {
         protocol: "http",
         hostname: "localhost",
@@ -13,6 +10,13 @@ const nextConfig = {
         pathname: "/api/images/**",
       },
     ],
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': './src',
+    };
+    return config;
   },
 }
 

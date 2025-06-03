@@ -55,6 +55,14 @@ public class ProjectServiceImpl implements ProjectService {
         
         Project project = mapToEntity(projectDto);
         
+        // 날짜 필드 확인 및 기본값 설정
+        if (project.getStartDate() == null) {
+            project.setStartDate(java.time.LocalDate.now().toString());
+        }
+        if (project.getEndDate() == null) {
+            project.setEndDate(java.time.LocalDate.now().toString());
+        }
+        
         // 이미지 파일 처리
         if (images != null && !images.isEmpty()) {
             List<String> imageUrls = new ArrayList<>();
@@ -153,42 +161,87 @@ public class ProjectServiceImpl implements ProjectService {
             List<MultipartFile> images,
             Integer thumbnailIndex,
             List<MultipartFile> troubleshootingImages,
-            List<String> troubleshootingImageIndices) throws IOException {
+            List<String> troubleshootingImageIndices,
+            List<String> deletedImages) throws IOException {
         
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
         
         // 기본 프로젝트 정보 업데이트
         if (projectDto.getName() != null) project.setTitle(projectDto.getName());
-        if (projectDto.getSummary() != null) project.setSummary(projectDto.getSummary());
+        
+        // summary 필드 업데이트 - null 또는 빈 문자열 체크
+        if (projectDto.getSummary() != null && !projectDto.getSummary().trim().isEmpty()) {
+            project.setSummary(projectDto.getSummary());
+        } else if (project.getSummary() == null || project.getSummary().trim().isEmpty()) {
+            // 기존 summary가 없는 경우 기본값 설정
+            project.setSummary(project.getTitle() != null ? project.getTitle() + " 프로젝트" : "새 프로젝트");
+        }
+        
         if (projectDto.getDescription() != null) project.setDescription(projectDto.getDescription());
         if (projectDto.getTechnologies() != null) project.setTechnologies(projectDto.getTechnologies());
-        if (projectDto.getStartDate() != null) project.setStartDate(projectDto.getStartDate().toString());
-        if (projectDto.getEndDate() != null) project.setEndDate(projectDto.getEndDate().toString());
+        
+        // 날짜 필드 업데이트 - null 체크 추가
+        if (projectDto.getStartDate() != null) {
+            project.setStartDate(projectDto.getStartDate().toString());
+        } else if (project.getStartDate() == null) {
+            // 기존 데이터도 없는 경우 현재 날짜로 설정
+            project.setStartDate(java.time.LocalDate.now().toString());
+        }
+        
+        if (projectDto.getEndDate() != null) {
+            project.setEndDate(projectDto.getEndDate().toString());
+        } else if (project.getEndDate() == null) {
+            // 기존 데이터도 없는 경우 현재 날짜로 설정
+            project.setEndDate(java.time.LocalDate.now().toString());
+        }
+        
+        // GitHub 및 웹사이트 URL 업데이트
+        if (projectDto.getGithub() != null) project.setGithub(projectDto.getGithub());
+        if (projectDto.getWebsite() != null) project.setWebsite(projectDto.getWebsite());
         
         // 이미지 파일 처리
-        if (images != null && !images.isEmpty()) {
-            List<String> imageUrls = new ArrayList<>();
+        List<String> currentImages = new ArrayList<>(project.getImages());
+        
+        // 삭제된 이미지 처리
+        if (deletedImages != null && !deletedImages.isEmpty()) {
+            System.out.println("삭제할 이미지: " + deletedImages);
+            // 현재 이미지 목록에서 삭제 대상 이미지를 제거
+            currentImages.removeAll(deletedImages);
             
-            // 모든 이미지 파일을 저장하고 URL을 목록에 추가
-            for (MultipartFile image : images) {
-                if (!image.isEmpty()) {
-                    String imageUrl = saveImage(image);
-                    imageUrls.add(imageUrl);
+            // 썸네일이 삭제된 경우 처리
+            if (deletedImages.contains(project.getThumbnail())) {
+                if (!currentImages.isEmpty()) {
+                    // 남은 이미지 중 첫 번째를 썸네일로 설정
+                    project.setThumbnail(currentImages.get(0));
+                } else {
+                    // 모든 이미지가 삭제된 경우 썸네일을 빈 문자열로 설정
+                    project.setThumbnail("");
                 }
-            }
-            
-            project.setImages(imageUrls);
-            
-            // 썸네일 설정 (기본적으로 첫 번째 이미지)
-            if (thumbnailIndex != null && thumbnailIndex >= 0 && thumbnailIndex < imageUrls.size()) {
-                project.setThumbnail(imageUrls.get(thumbnailIndex));
-            } else if (!imageUrls.isEmpty()) {
-                project.setThumbnail(imageUrls.get(0));
             }
         }
         
-        // 트러블슈팅 처리 (기존 트러블슈팅 모두 제거 후 새로 추가)
+        if (images != null && !images.isEmpty()) {
+            // 새 이미지 저장 및 URL 목록에 추가
+            for (MultipartFile image : images) {
+                if (!image.isEmpty()) {
+                    String imageUrl = saveImage(image);
+                    currentImages.add(imageUrl);
+                }
+            }
+            
+            // 썸네일 설정
+            if (thumbnailIndex != null && thumbnailIndex >= 0 && thumbnailIndex < currentImages.size()) {
+                project.setThumbnail(currentImages.get(thumbnailIndex));
+            } else if (!currentImages.isEmpty() && (project.getThumbnail() == null || project.getThumbnail().isEmpty())) {
+                // 기본값으로 첫 번째 이미지를 썸네일로 설정 (기존 썸네일이 없거나 비어있는 경우만)
+                project.setThumbnail(currentImages.get(0));
+            }
+        }
+        
+        // 업데이트된 이미지 목록 설정
+        project.setImages(currentImages);
+        
         if (projectDto.getTroubleshooting() != null) {
             // 기존 트러블슈팅 항목 제거
             project.getTroubleshooting().clear();
@@ -367,7 +420,14 @@ public class ProjectServiceImpl implements ProjectService {
     private Project mapToEntity(ProjectDto projectDto) {
         Project project = new Project();
         project.setTitle(projectDto.getName());
-        project.setSummary(projectDto.getSummary());
+        
+        // summary 필드가 null이면 기본값 설정
+        if (projectDto.getSummary() != null && !projectDto.getSummary().trim().isEmpty()) {
+            project.setSummary(projectDto.getSummary());
+        } else {
+            project.setSummary(projectDto.getName() != null ? projectDto.getName() + " 프로젝트" : "새 프로젝트");
+        }
+        
         project.setDescription(projectDto.getDescription());
         project.setTechnologies(projectDto.getTechnologies());
         project.setThumbnail(projectDto.getThumbnail());
@@ -383,12 +443,17 @@ public class ProjectServiceImpl implements ProjectService {
             project.setImages(new ArrayList<>());
         }
         
+        // 날짜 필드 설정 - null 체크 및 기본값
         if (projectDto.getStartDate() != null) {
             project.setStartDate(projectDto.getStartDate().toString());
+        } else {
+            project.setStartDate(java.time.LocalDate.now().toString());
         }
         
         if (projectDto.getEndDate() != null) {
             project.setEndDate(projectDto.getEndDate().toString());
+        } else {
+            project.setEndDate(java.time.LocalDate.now().toString());
         }
         
         return project;
@@ -420,6 +485,10 @@ public class ProjectServiceImpl implements ProjectService {
         // 파일 저장
         File dest = new File(filePath);
         file.transferTo(dest);
+        
+        // 파일 권한 설정 - 읽기/쓰기 권한 추가
+        dest.setReadable(true, false);
+        dest.setWritable(true, false);
         
         // 상대 URL 반환 (프론트엔드에서 접근 가능한 URL)
         return "/api/images/" + fileName;

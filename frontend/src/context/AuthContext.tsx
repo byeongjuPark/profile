@@ -6,7 +6,8 @@ interface AuthContextType {
   isLoggedIn: boolean;
   login: () => void;
   logout: () => void;
-  toggleAuth: () => void;
+  showLoginModal: boolean;
+  setShowLoginModal: (show: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +18,7 @@ const ADMIN_PASSWORD = 'dmswl120';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   
   // Load auth state on mount
   useEffect(() => {
@@ -33,13 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const login = () => setIsLoggedIn(true);
   const logout = () => setIsLoggedIn(false);
-  const toggleAuth = () => setIsLoggedIn(prev => !prev);
   
   const value = {
     isLoggedIn,
     login,
     logout,
-    toggleAuth
+    showLoginModal,
+    setShowLoginModal
   };
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

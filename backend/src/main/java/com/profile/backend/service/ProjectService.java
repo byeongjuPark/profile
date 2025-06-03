@@ -30,7 +30,8 @@ public interface ProjectService {
         List<MultipartFile> images,
         Integer thumbnailIndex,
         List<MultipartFile> troubleshootingImages,
-        List<String> troubleshootingImageIndices
+        List<String> troubleshootingImageIndices,
+        List<String> deletedImages
     ) throws IOException;
     
     void deleteProject(Long id);

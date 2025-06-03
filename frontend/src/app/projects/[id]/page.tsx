@@ -1,308 +1,320 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { useRouter, notFound } from "next/navigation"
-import { fetchProjectById } from "@/lib/api"
+import React, { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Project } from "@/types/project"
-import DeleteProjectButton from "@/components/DeleteProjectButton"
+import { fetchProjectById } from "@/lib/api"
+import Image from "next/image"
+import { formatDate } from "@/lib/utils"
+import { getImageUrl } from "@/lib/utils"
+import { DEFAULT_PROJECT_IMAGE } from "@/lib/constants"
 import { useAuth } from "@/context/AuthContext"
-import PageTransition from "@/components/PageTransition"
+import Link from "next/link"
 
-interface ProjectPageProps {
-  params: {
-    id: string
-  }
-}
-
-export default function ProjectPage({ params }: ProjectPageProps) {
+export default function ProjectPage({ params }: { params: { id: string } }) {
+  const { id } = params
+  const router = useRouter()
+  const { isLoggedIn } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { isLoggedIn } = useAuth()
-  const router = useRouter()
-
-  // 이미지 캐러셀 관련 상태
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
-  // 이미지 이동 함수
-  const goToNextImage = () => {
-    if (project && project.images.length > 0) {
-      setCurrentImageIndex((prev) => (prev + 1) % project.images.length)
-    }
-  }
-
-  const goToPrevImage = () => {
-    if (project && project.images.length > 0) {
-      setCurrentImageIndex((prev) => (prev - 1 + project.images.length) % project.images.length)
-    }
-  }
-
+  // 프로젝트 데이터 로드
   useEffect(() => {
-    const loadProject = async () => {
+    const fetchProject = async () => {
       try {
         setLoading(true)
-        const data = await fetchProjectById(params.id)
-        setProject(data)
-        setError(null)
+        const projectData = await fetchProjectById(id)
+        setProject(projectData)
       } catch (err) {
-        console.error(`Error loading project ${params.id}:`, err)
-        setError("프로젝트를 불러오는 중 오류가 발생했습니다.")
+        console.error('프로젝트를 불러오는 중 오류 발생:', err)
+        setError('프로젝트를 불러올 수 없습니다.')
       } finally {
         setLoading(false)
       }
     }
 
-    loadProject()
-  }, [params.id])
+    if (id) {
+      fetchProject()
+    }
+  }, [id])
+
+  // 이미지 이동 처리
+  const handleNextImage = () => {
+    if (project?.images && project.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev + 1) % project.images.length)
+    }
+  }
+
+  const handlePrevImage = () => {
+    if (project?.images && project.images.length > 0) {
+      setCurrentImageIndex((prev) => (prev - 1 + project.images.length) % project.images.length)
+    }
+  }
+
+  // 이미지 배열 가져오기 (썸네일 + 추가 이미지들)
+  const getAllImages = (project: Project | null) => {
+    if (!project) return []
+    
+    const images = []
+    
+    // 썸네일이 있으면 첫 번째 이미지로 추가
+    if (project.thumbnail) {
+      images.push(project.thumbnail)
+    }
+    
+    // 나머지 이미지들 추가 (썸네일과 중복되지 않는 이미지만)
+    if (project.images && project.images.length > 0) {
+      project.images.forEach(img => {
+        // 이미 추가된 썸네일과 같은 이미지가 아닌 경우에만 추가
+        if (img !== project.thumbnail) {
+          images.push(img)
+        }
+      })
+    }
+    
+    // 이미지가 하나도 없으면 기본 이미지 사용
+    if (images.length === 0) {
+      images.push(DEFAULT_PROJECT_IMAGE)
+    }
+    
+    return images
+  }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex justify-center items-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
+        <span className="ml-3 font-mono text-cyan-400 animate-pulse">Loading Project...</span>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen">
-        <p className="text-red-500 mb-4">{error}</p>
-        <div className="flex space-x-4">
-          <button onClick={() => router.push("/projects")} className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-300">
-            프로젝트 목록으로
-          </button>
-          <button onClick={() => window.location.reload()} className="bg-secondary hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300">
-            다시 시도
-          </button>
+      <div className="terminal-card max-w-md mx-auto my-12">
+        <div className="terminal-header">
+          <div className="terminal-dot terminal-dot-red"></div>
+          <div className="terminal-dot terminal-dot-yellow"></div>
+          <div className="terminal-dot terminal-dot-green"></div>
+          <span className="ml-2 font-mono text-xs text-gray-400">Error</span>
+        </div>
+        <div className="terminal-body">
+          <p className="text-red-500 mb-4 font-mono">throw new Error(<span className="text-green-400">"{error}"</span>);</p>
+          <Link href="/projects" className="text-cyan-400 hover:text-cyan-300 font-mono">
+            return projects.getAll();
+          </Link>
         </div>
       </div>
     )
   }
 
   if (!project) {
-    notFound()
+    return (
+      <div className="terminal-card max-w-md mx-auto my-12">
+        <div className="terminal-header">
+          <div className="terminal-dot terminal-dot-red"></div>
+          <div className="terminal-dot terminal-dot-yellow"></div>
+          <div className="terminal-dot terminal-dot-green"></div>
+          <span className="ml-2 font-mono text-xs text-gray-400">404</span>
+        </div>
+        <div className="terminal-body">
+          <p className="text-gray-300 mb-4 font-mono">Project not found: <span className="text-red-400">null</span> reference exception</p>
+          <Link href="/projects" className="text-cyan-400 hover:text-cyan-300 font-mono">
+            return projects.getAll();
+          </Link>
+        </div>
+      </div>
+    )
   }
 
-  // 설명 텍스트를 줄바꿈 유지하며 렌더링
-  const descriptionParagraphs = project.description ? project.description.split("\n\n") : []
-
-  // 날짜 포맷팅 함수
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
-
-  // 이미지 경로 변환 함수 추가
-  const getImageSrc = (imagePath: string | undefined) => {
-    if (!imagePath) {
-      console.log("Image path is empty or undefined, using placeholder")
-      return "/images/project-placeholder.jpg"
-    }
-
-    console.log("Project detail - Processing image path:", imagePath)
-
-    // 이미 완전한 URL인 경우
-    if (imagePath.startsWith("http")) {
-      console.log("Project detail - Already complete URL:", imagePath)
-      return imagePath
-    }
-
-    // 백엔드 API 경로인 경우 (상대 경로)
-    if (imagePath.startsWith("/api/images/")) {
-      const fullUrl = `http://localhost:8080${imagePath}`
-      console.log("Project detail - Converting API path to URL:", fullUrl)
-      return fullUrl
-    }
-
-    // 파일명만 있는 경우 백엔드 API 경로로 변환 (대부분의 트러블슈팅 이미지가 이 경우)
-    if (!imagePath.startsWith("/images/")) {
-      const fullUrl = `http://localhost:8080/api/images/${imagePath}`
-      console.log("Project detail - Converting filename to URL:", fullUrl)
-      return fullUrl
-    }
-
-    // 정적 이미지 (public 폴더)
-    console.log("Project detail - Using static image path:", imagePath)
-    return imagePath
-  }
+  const allImages = getAllImages(project)
 
   return (
-    <PageTransition>
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 text-center">
-            <h1 className="text-3xl font-bold mb-2 text-dark">{project.title}</h1>
-            <div className="w-20 h-1 bg-primary mx-auto mb-6"></div>
+    <div className="bg-gray-900 py-12">
+      <div className="max-w-4xl mx-auto px-4 pb-8">
+        <div className="terminal-card mb-6 overflow-hidden">
+          <div className="terminal-header">
+            <div className="terminal-dot terminal-dot-red"></div>
+            <div className="terminal-dot terminal-dot-yellow"></div>
+            <div className="terminal-dot terminal-dot-green"></div>
+            <span className="ml-2 font-mono text-xs text-gray-400">project.view.js</span>
+            <span className="ml-auto text-xs text-gray-500 font-mono">ID: {project.id}</span>
           </div>
-
-          <div className="flex justify-end items-center mb-8">
-            <div className="flex items-center space-x-4">
-              {isLoggedIn && (
-                <>
-                  <Link href={`/projects/${project.id}/edit`} className="bg-secondary hover:bg-green-600 text-white px-4 py-2 rounded-md transition duration-300 shadow-md inline-flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                    수정하기
-                  </Link>
-                  <DeleteProjectButton projectId={project.id} />
-                </>
-              )}
-              <Link href="/projects" className="bg-primary hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-300 shadow-md inline-flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                프로젝트 목록으로
-              </Link>
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            {/* 프로젝트 이미지 캐러셀 */}
-            {project.images && project.images.length > 0 ? (
-              <div className="relative h-[400px] w-full mb-8 overflow-hidden rounded-lg">
-                <Image
-                  src={getImageSrc(project.images[currentImageIndex])}
-                  alt={`${project.title} 이미지 ${currentImageIndex + 1}`}
+          
+          {/* 이미지 캐러셀 */}
+          <div className="relative h-96 w-full bg-black border-b border-gray-700">
+            {allImages.length > 0 && (
+              <>
+                <Image 
+                  src={getImageUrl(allImages[currentImageIndex])} 
+                  alt={project.title || project.name || "프로젝트"}
                   fill
-                  sizes="(max-width: 768px) 100vw, 90vw"
-                  style={{ objectFit: "cover" }}
+                  style={{ objectFit: "contain" }}
+                  className="bg-black opacity-90"
                 />
-
-                {/* 이미지 인덱스 표시 */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full">
-                  {currentImageIndex + 1} / {project.images.length}
-                </div>
-
-                {/* 이미지 이동 버튼 */}
-                {project.images.length > 1 && (
+                
+                {/* 이미지 네비게이션 버튼 */}
+                {allImages.length > 1 && (
                   <>
-                    <button
-                      onClick={goToPrevImage}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-                      aria-label="이전 이미지"
+                    <button 
+                      onClick={handlePrevImage}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-cyan-300 p-2 rounded-full"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
                     </button>
-                    <button
-                      onClick={goToNextImage}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
-                      aria-label="다음 이미지"
+                    <button 
+                      onClick={handleNextImage}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-cyan-300 p-2 rounded-full"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
+                    
+                    {/* 이미지 인디케이터 */}
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
+                      {allImages.map((_, index) => (
+                        <span 
+                          key={index}
+                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? 'bg-cyan-400' : 'bg-gray-600'}`}
+                        />
+                      ))}
+                    </div>
                   </>
                 )}
+              </>
+            )}
+          </div>
+
+          {/* 프로젝트 상세 정보 */}
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-mono font-bold text-cyan-400 flex items-center">
+                <span className="text-green-400">class</span> {project.title || project.name || "Project"} 
+                <span className="text-xs ml-3 bg-gray-800 px-2 py-1 rounded-sm text-gray-400 font-normal">v1.0.0</span>
+              </h1>
+              <div className="text-green-400 text-xs font-mono flex items-center">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+                Running
               </div>
-            ) : (
-              <div className="relative h-[400px] w-full mb-8 overflow-hidden rounded-lg bg-gray-200 flex items-center justify-center">
-                <p className="text-gray-500">이미지가 없습니다</p>
+            </div>
+            
+            <div className="mb-6 bg-gray-800 p-4 rounded-md border-l-2 border-cyan-500">
+              <p className="text-gray-300 whitespace-pre-line">
+                <span className="text-purple-400">/**</span><br/>
+                <span className="text-purple-400"> * {project.summary}</span><br/>
+                <span className="text-purple-400"> */</span>
+              </p>
+            </div>
+            
+            <div className="mb-6">
+              <h2 className="section-heading">
+                Description
+              </h2>
+              <div className="bg-gray-800 p-4 rounded-md font-mono text-gray-300 whitespace-pre-line">
+                {project.description}
+              </div>
+            </div>
+            
+            {project.technologies && project.technologies.length > 0 && (
+              <div className="mb-6">
+                <h2 className="section-heading">
+                  Technologies
+                </h2>
+                <div className="flex flex-wrap gap-2 bg-gray-800 p-4 rounded-md">
+                  {project.technologies.map((tech, idx) => (
+                    <span key={idx} className="code-tag">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
-
-            {/* 썸네일 목록 */}
-            {project.images && project.images.length > 1 && (
-              <div className="mb-8 flex space-x-2 overflow-x-auto pb-2">
-                {project.images.map((image, index) => (
-                  <div
-                    key={index}
-                    className={`relative w-20 h-20 flex-shrink-0 cursor-pointer rounded-md overflow-hidden 
-                      ${currentImageIndex === index ? "ring-2 ring-primary" : "opacity-70"}`}
-                    onClick={() => setCurrentImageIndex(index)}
-                  >
-                    <Image src={getImageSrc(image)} alt={`${project.title} 썸네일 ${index + 1}`} fill sizes="80px" style={{ objectFit: "cover" }} />
+            
+            <div className="mb-6">
+              <h2 className="section-heading">
+                Timeline
+              </h2>
+              <div className="bg-gray-800 p-4 rounded-md font-mono">
+                <div className="flex space-x-4">
+                  <div className="flex-1">
+                    <span className="text-gray-400 text-sm">Start:</span>
+                    <p className="text-cyan-300">{formatDate(project.startDate)}</p>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* 프로젝트 정보 섹션 */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4 text-dark">프로젝트 정보</h2>
-              <div className="w-16 h-1 bg-primary mb-6"></div>
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium mb-2 text-dark">개요</h3>
-                  <p className="text-gray-700 mb-4">{project.summary}</p>
-
-                  <h3 className="text-lg font-medium mb-2 text-dark">사용 기술</h3>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {project.technologies.map((tech, index) => (
-                      <span key={index} className="bg-gray-100 text-gray-800 px-3 py-1 rounded-md">
-                        {tech}
-                      </span>
-                    ))}
+                  <div className="flex-1">
+                    <span className="text-gray-400 text-sm">End:</span>
+                    <p className="text-cyan-300">{formatDate(project.endDate)}</p>
                   </div>
-
-                  <h3 className="text-lg font-medium mb-2 text-dark">프로젝트 기간</h3>
-                  <p className="text-gray-700">
-                    {formatDate(project.startDate)} ~ {formatDate(project.endDate)}
-                  </p>
                 </div>
               </div>
             </div>
-
-            {/* 프로젝트 설명 섹션 */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4 text-dark">프로젝트 설명</h2>
-              <div className="w-16 h-1 bg-primary mb-6"></div>
-              <div className="prose max-w-none text-gray-700">
-                {descriptionParagraphs.map((paragraph, index) => (
-                  <p key={index} className="mb-4">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            {/* 트러블 슈팅 섹션 */}
+            
             {project.troubleshooting && project.troubleshooting.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold mb-4 text-dark">트러블 슈팅</h2>
-                <div className="w-16 h-1 bg-primary mb-6"></div>
-                <div className="space-y-8">
-                  {project.troubleshooting.map((item) => {
-                    console.log("트러블슈팅 항목:", item.id, "이미지 경로:", item.image)
-                    return (
-                      <div key={item.id} className="bg-gray-50 p-6 rounded-lg">
-                        <h3 className="text-xl font-medium mb-4 text-dark">{item.title}</h3>
-
-                        <div className="flex flex-col md:flex-row gap-6">
-                          {item.image && item.image.trim() !== "" && (
-                            <div className="md:w-1/3">
-                              <div className="relative h-60 w-full rounded-lg overflow-hidden">
-                                <Image src={getImageSrc(item.image)} alt={item.title} fill sizes="(max-width: 768px) 100vw, 33vw" style={{ objectFit: "cover" }} />
-                              </div>
+              <div className="mt-8">
+                <h2 className="section-heading">
+                  Troubleshooting
+                </h2>
+                <div className="space-y-6">
+                  {project.troubleshooting.map((item) => (
+                    <div key={item.id} className="bg-gray-800 p-4 rounded-md border-l-2 border-red-500">
+                      <h3 className="text-lg font-mono font-medium mb-3 text-red-400">
+                        <span className="text-gray-400">try {"{"}</span> {item.title} <span className="text-gray-400">{"}"} catch (e) {"{"}</span>
+                      </h3>
+                      <div className="flex flex-col md:flex-row gap-4">
+                        {item.image && (
+                          <div className="md:w-1/3">
+                            <div className="relative h-48 w-full rounded-sm overflow-hidden border border-gray-700">
+                              <Image 
+                                src={getImageUrl(item.image)} 
+                                alt={item.title} 
+                                fill 
+                                style={{ objectFit: "cover" }} 
+                              />
                             </div>
-                          )}
-
-                          <div className={item.image && item.image.trim() !== "" ? "md:w-2/3" : "w-full"}>
-                            <p className="text-gray-700">{item.description}</p>
                           </div>
+                        )}
+                        <div className={item.image ? "md:w-2/3" : "w-full"}>
+                          <p className="text-gray-300 whitespace-pre-line">{item.description}</p>
                         </div>
                       </div>
-                    )
-                  })}
+                      <div className="mt-2 text-right text-gray-400">{"}"}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
           </div>
         </div>
-      </section>
-    </PageTransition>
+        
+        {/* 프로젝트 액션 버튼 */}
+        <div className="font-mono flex justify-between text-sm">
+          <Link 
+            href="/projects"
+            className="bg-gray-800 hover:bg-gray-700 text-cyan-400 px-4 py-2 rounded-md transition-colors border border-gray-700 flex items-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            return projects.getAll();
+          </Link>
+          
+          {isLoggedIn && (
+            <Link 
+              href={`/projects/${project.id}/edit`}
+              className="bg-gray-800 hover:bg-gray-700 text-green-400 px-4 py-2 rounded-md transition-colors border border-gray-700 flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              project.update();
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

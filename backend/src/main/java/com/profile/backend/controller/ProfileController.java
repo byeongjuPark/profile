@@ -68,7 +68,17 @@ public class ProfileController {
             @RequestParam(value = "email", required = false) String email,
             @RequestParam(value = "phone", required = false) String phone,
             @RequestParam(value = "address", required = false) String address,
-            @RequestParam("imageFile") MultipartFile imageFile) throws IOException {
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile) throws IOException {
+        
+        System.out.println("프로필 업데이트 요청 받음 (ID: " + id + ")");
+        System.out.println("name: " + name);
+        System.out.println("title: " + title);
+        System.out.println("bio: " + bio);
+        System.out.println("email: " + email);
+        System.out.println("phone: " + phone);
+        System.out.println("location: " + location);
+        System.out.println("imageFile: " + (imageFile != null ? (imageFile.isEmpty() ? "비어있음" : imageFile.getOriginalFilename()) : "null"));
         
         ProfileDto profileDto = ProfileDto.builder()
                 .name(name)
@@ -76,7 +86,7 @@ public class ProfileController {
                 .bio(bio)
                 .email(email)
                 .phone(phone)
-                .address(address)
+                .address(address != null ? address : location)
                 .build();
         
         return ResponseEntity.ok(profileService.updateProfileWithImage(id, profileDto, imageFile));

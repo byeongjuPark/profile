@@ -12,7 +12,7 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: userpassword
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./backend/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -34,8 +34,14 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/profiledb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=user
       - SPRING_DATASOURCE_PASSWORD=userpassword
+      - SPRING_PROFILES_ACTIVE=dev
+      - APP_UPLOAD_DIR=/app/uploads
+      - APP_UPLOAD_IMAGE_DIR=/app/uploads/images
     ports:
       - "8080:8080"
+    volumes:
+    # 이미지 저장 디렉토리를 위한 볼륨 마운트
+    - profile-uploads:/app/uploads
 
   # 프론트엔드 서비스
   frontend:
@@ -47,7 +53,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8080
+      - NEXT_PUBLIC_API_URL=${API_URL:-http://localhost:8080}
 
 volumes:
   mysql-data:
+  profile-uploads:

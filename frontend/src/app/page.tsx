@@ -33,6 +33,7 @@ const DEFAULT_PROFILE: Profile = {
   title: "웹 개발자",
   bio: "안녕하세요! 저는 웹 개발자입니다. React, TypeScript, Next.js 등을 활용하여 웹 애플리케이션을 개발합니다.",
   email: "example@email.com",
+  phone: "010-1234-5678",
   image: "/images/portfolio.jpg",
   careers: [
     {
@@ -89,7 +90,7 @@ const DEFAULT_PROFILE: Profile = {
 }
 
 export default function Home() {
-  const { isLoggedIn, toggleAuth } = useAuth()
+  const { isLoggedIn } = useAuth()
 
   const [profile, setProfile] = useState<Profile>({
     id: "1",
@@ -97,6 +98,7 @@ export default function Home() {
     title: "Loading...",
     bio: "Loading profile data...",
     email: "loading@example.com",
+    phone: "Loading phone...",
     image: "/images/portfolio.jpg",
     careers: [],
     educations: [],
@@ -169,7 +171,7 @@ export default function Home() {
           for (const career of DEFAULT_PROFILE.careers) {
             const { id, ...careerData } = career
             try {
-              updatedProfile = await addCareer(updatedProfile.id, careerData)
+              updatedProfile = await addCareer(createdProfile.id, careerData)
             } catch (err) {
               console.error("Error adding default career:", err)
             }
@@ -181,7 +183,7 @@ export default function Home() {
           for (const education of DEFAULT_PROFILE.educations) {
             const { id, ...educationData } = education
             try {
-              updatedProfile = await addEducation(updatedProfile.id, educationData)
+              updatedProfile = await addEducation(createdProfile.id, educationData)
             } catch (err) {
               console.error("Error adding default education:", err)
             }
@@ -193,7 +195,7 @@ export default function Home() {
           for (const skill of DEFAULT_PROFILE.skills) {
             const { id, ...skillData } = skill
             try {
-              updatedProfile = await addSkill(updatedProfile.id, skillData)
+              updatedProfile = await addSkill(createdProfile.id, skillData)
             } catch (err) {
               console.error("Error adding default skill:", err)
             }
@@ -205,7 +207,7 @@ export default function Home() {
           for (const social of DEFAULT_PROFILE.socials) {
             const { id, ...socialData } = social
             try {
-              updatedProfile = await addSocial(updatedProfile.id, socialData)
+              updatedProfile = await addSocial(createdProfile.id, socialData)
             } catch (err) {
               console.error("Error adding default social:", err)
             }
@@ -215,7 +217,11 @@ export default function Home() {
         setProfile(updatedProfile)
         setNoProfileData(false)
         setError("프로필이 성공적으로 생성되었습니다.")
-        setTimeout(() => setError(null), 3000) // 3초 후 메시지 사라짐
+        setTimeout(() => {
+          setError(null)
+          // 페이지 새로고침
+          window.location.reload()
+        }, 1500) // 1.5초 후 새로고침
       } catch (err) {
         console.error("Error creating profile:", err)
         setError("프로필 생성 중 오류가 발생했습니다.")
@@ -231,6 +237,12 @@ export default function Home() {
     try {
       const updatedProfile = await updateProfileInfo(profile.id, updatedInfo)
       setProfile(updatedProfile)
+      setError("프로필이 성공적으로 업데이트되었습니다.")
+      setTimeout(() => {
+        setError(null)
+        // 페이지 새로고침
+        window.location.reload()
+      }, 1500) // 1.5초 후 새로고침
     } catch (err) {
       console.error("Error updating profile:", err)
       setError("프로필 정보 업데이트 중 오류가 발생했습니다.")
@@ -250,44 +262,32 @@ export default function Home() {
 
     setIsLoading(true)
     try {
-      const { id, ...careerData } = career
-      const updatedProfile = await addCareer(profile.id, careerData)
+      const updatedProfile = await addCareer(profile.id, career)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error adding career:", err)
-      setError("경력 정보 추가 중 오류가 발생했습니다.")
+      setError("경력 추가 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleUpdateCareer = async (updatedCareer: Career) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 경력을 수정할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
-    if (!profile.id || !updatedCareer.id) return
+    if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...careerData } = updatedCareer
-      const updatedProfile = await updateCareer(profile.id, id, careerData)
+      const updatedProfile = await updateCareer(profile.id, updatedCareer.id, updatedCareer)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error updating career:", err)
-      setError("경력 정보 업데이트 중 오류가 발생했습니다.")
+      setError("경력 업데이트 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleDeleteCareer = async (id: string) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 경력을 삭제할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
@@ -296,61 +296,44 @@ export default function Home() {
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error deleting career:", err)
-      setError("경력 정보 삭제 중 오류가 발생했습니다.")
+      setError("경력 삭제 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Education handlers with no-profile checks
+  // Education handlers
   const handleAddEducation = async (education: Education) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 교육을 추가할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...educationData } = education
-      const updatedProfile = await addEducation(profile.id, educationData)
+      const updatedProfile = await addEducation(profile.id, education)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error adding education:", err)
-      setError("교육 정보 추가 중 오류가 발생했습니다.")
+      setError("교육 추가 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleUpdateEducation = async (updatedEducation: Education) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 교육을 수정할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
-    if (!profile.id || !updatedEducation.id) return
+    if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...educationData } = updatedEducation
-      const updatedProfile = await updateEducation(profile.id, id, educationData)
+      const updatedProfile = await updateEducation(profile.id, updatedEducation.id, updatedEducation)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error updating education:", err)
-      setError("교육 정보 업데이트 중 오류가 발생했습니다.")
+      setError("교육 업데이트 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleDeleteEducation = async (id: string) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 교육을 삭제할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
@@ -359,61 +342,44 @@ export default function Home() {
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error deleting education:", err)
-      setError("교육 정보 삭제 중 오류가 발생했습니다.")
+      setError("교육 삭제 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Skill handlers with no-profile checks
+  // Skill handlers
   const handleAddSkill = async (skill: Skill) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 기술을 추가할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...skillData } = skill
-      const updatedProfile = await addSkill(profile.id, skillData)
+      const updatedProfile = await addSkill(profile.id, skill)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error adding skill:", err)
-      setError("기술 정보 추가 중 오류가 발생했습니다.")
+      setError("기술 추가 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleUpdateSkill = async (updatedSkill: Skill) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 기술을 수정할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
-    if (!profile.id || !updatedSkill.id) return
+    if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...skillData } = updatedSkill
-      const updatedProfile = await updateSkill(profile.id, id, skillData)
+      const updatedProfile = await updateSkill(profile.id, updatedSkill.id, updatedSkill)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error updating skill:", err)
-      setError("기술 정보 업데이트 중 오류가 발생했습니다.")
+      setError("기술 업데이트 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleDeleteSkill = async (id: string) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 기술을 삭제할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
@@ -422,61 +388,44 @@ export default function Home() {
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error deleting skill:", err)
-      setError("기술 정보 삭제 중 오류가 발생했습니다.")
+      setError("기술 삭제 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Social handlers with no-profile checks
+  // Social handlers
   const handleAddSocial = async (social: Social) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 소셜 정보를 추가할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...socialData } = social
-      const updatedProfile = await addSocial(profile.id, socialData)
+      const updatedProfile = await addSocial(profile.id, social)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error adding social:", err)
-      setError("소셜 정보 추가 중 오류가 발생했습니다.")
+      setError("소셜 미디어 추가 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleUpdateSocial = async (updatedSocial: Social) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 소셜 정보를 수정할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
-    if (!profile.id || !updatedSocial.id) return
+    if (!profile.id) return
 
     setIsLoading(true)
     try {
-      const { id, ...socialData } = updatedSocial
-      const updatedProfile = await updateSocial(profile.id, id, socialData)
+      const updatedProfile = await updateSocial(profile.id, updatedSocial.id, updatedSocial)
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error updating social:", err)
-      setError("소셜 정보 업데이트 중 오류가 발생했습니다.")
+      setError("소셜 미디어 업데이트 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleDeleteSocial = async (id: string) => {
-    if (noProfileData) {
-      setError("프로필 데이터가 없어 소셜 정보를 삭제할 수 없습니다. 관리자에게 문의하세요.")
-      return
-    }
-
     if (!profile.id) return
 
     setIsLoading(true)
@@ -485,7 +434,7 @@ export default function Home() {
       setProfile(updatedProfile)
     } catch (err) {
       console.error("Error deleting social:", err)
-      setError("소셜 정보 삭제 중 오류가 발생했습니다.")
+      setError("소셜 미디어 삭제 중 오류가 발생했습니다.")
     } finally {
       setIsLoading(false)
     }
@@ -522,15 +471,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Admin login button (not needed if navbar already has it) */}
-        {!isLoggedIn && (
-          <div className="fixed top-4 right-4 z-50">
-            <button onClick={toggleAuth} className="px-4 py-2 rounded-md shadow-md text-white bg-green-500 hover:bg-green-600 transition-colors">
-              관리자 로그인
-            </button>
-          </div>
-        )}
-
         {isLoading ? (
           <div className="flex justify-center items-center h-96">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -538,15 +478,43 @@ export default function Home() {
         ) : error && !error.includes("성공") ? (
           <div className="text-center p-8 bg-red-50 text-red-600 rounded-lg mx-auto max-w-2xl mt-8">{error}</div>
         ) : (
-          <>
+          <div className="max-w-6xl mx-auto">
             <ProfileHeader
-              name={profile.name}
-              title={profile.title}
-              bio={profile.bio || ""}
-              email={profile.email || ""}
-              image={profile.image || "/images/portfolio.jpg"}
+              profile={{
+                id: profile.id,
+                name: profile.name,
+                title: profile.title,
+                bio: profile.bio,
+                email: profile.email,
+                phone: profile.phone,
+                image: typeof profile.image === 'string' ? profile.image : undefined,
+                location: profile.location,
+                github: profile.socials?.find(s => s.platform.toLowerCase() === 'github')?.url,
+                linkedin: profile.socials?.find(s => s.platform.toLowerCase() === 'linkedin')?.url,
+                website: profile.socials?.find(s => s.platform.toLowerCase() === 'website')?.url,
+                skills: profile.skills?.map(skill => skill.name) || []
+              }}
               isLoggedIn={isLoggedIn}
-              onUpdate={handleUpdateProfileInfo}
+              onProfileUpdate={handleUpdateProfileInfo}
+              onSkillsUpdate={(skills) => {
+                // 스킬 배열을 객체 배열로 변환
+                const skillObjects = skills.map(name => ({
+                  id: uuidv4(),
+                  name,
+                  level: 3, // 기본 레벨
+                  category: "Frontend" // 기본 카테고리
+                }));
+                
+                // 기존 스킬 삭제
+                profile.skills.forEach(skill => {
+                  handleDeleteSkill(skill.id);
+                });
+                
+                // 새 스킬 추가
+                skillObjects.forEach(skill => {
+                  handleAddSkill(skill);
+                });
+              }}
             />
 
             <ProfileSection
@@ -564,17 +532,17 @@ export default function Home() {
             <SkillsSection skills={profile.skills} isLoggedIn={isLoggedIn} onAdd={handleAddSkill} onUpdate={handleUpdateSkill} onDelete={handleDeleteSkill} />
 
             <SocialSection socials={profile.socials} isLoggedIn={isLoggedIn} onAdd={handleAddSocial} onUpdate={handleUpdateSocial} onDelete={handleDeleteSocial} />
-          </>
+          </div>
         )}
       </main>
 
       <footer className="py-10 bg-gradient-to-r from-gray-900 to-gray-800 text-white mt-16">
-        <div className="container mx-auto px-4 text-center">
+        <div className="container mx-auto px-4 text-center max-w-6xl">
           <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="text-2xl font-bold">{profile.name || "내 포트폴리오"}</div>
+            <div className="text-2xl font-bold">{profile.title || "내 포트폴리오"}</div>
             {profile.title && profile.email && (
               <p className="text-gray-400 max-w-md mx-auto">
-                {profile.title} | {profile.email}
+                {profile.name} | {profile.email}
               </p>
             )}
             <p className="text-sm text-gray-400">© {new Date().getFullYear()} - 모든 권리 보유</p>

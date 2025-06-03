@@ -42,6 +42,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, isEditing }) => 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [thumbnailIndex, setThumbnailIndex] = useState<number | null>(null)
+  const [deletedImages, setDeletedImages] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 트러블 슈팅 관련 state
@@ -57,14 +58,19 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, isEditing }) => 
       setFormData(initialData)
       // 기존 이미지 URL을 미리보기로 설정
       if (initialData.images && initialData.images.length > 0) {
+        // 수정 모드일 때는 새 미리보기 배열을 만들고, 기존 파일은 초기화
+        setSelectedFiles([]) // 기존 선택 파일 초기화
         setPreviewUrls(initialData.images)
         // 썸네일 인덱스 찾기
         const thumbIndex = initialData.images.findIndex((img) => img === initialData.thumbnail)
-        setThumbnailIndex(thumbIndex >= 0 ? thumbIndex : null)
+        setThumbnailIndex(thumbIndex >= 0 ? thumbIndex : 0)
       }
     } else {
       // 새 프로젝트의 경우
       setFormData(emptyProject)
+      setSelectedFiles([])
+      setPreviewUrls([])
+      setThumbnailIndex(null)
     }
   }, [initialData])
 
@@ -106,14 +112,29 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, isEditing }) => 
       setPreviewUrls(newPreviewUrls)
 
       // 첫 번째 이미지가 추가되고 썸네일이 없으면 자동으로 썸네일로 설정
-      if (!formData.thumbnail && newPreviewUrls.length === 1) {
+      if (thumbnailIndex === null && newPreviewUrls.length > 0) {
         setThumbnailIndex(0)
         setFormData((prev) => ({ ...prev, thumbnail: newPreviewUrls[0] }))
+      }
+      
+      // 파일 입력 필드 초기화 (같은 파일 다시 선택할 수 있도록)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
       }
     }
   }
 
   const handleRemoveImage = (index: number) => {
+    // 삭제된 이미지 URL 추적 (파일이 아닌 URL인 경우만)
+    const removedUrl = previewUrls[index];
+    // 이미 업로드된 이미지인지 확인 (URL이 http나 /api로 시작하는 경우)
+    if (removedUrl && 
+        (removedUrl.startsWith('http') || 
+         removedUrl.startsWith('/api'))) {
+      setDeletedImages(prev => [...prev, removedUrl]);
+      console.log(`이미지 ${removedUrl}가 삭제 목록에 추가됨`);
+    }
+    
     // 파일 및 미리보기 URL 제거
     const newFiles = [...selectedFiles]
     newFiles.splice(index, 1)
@@ -159,6 +180,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, isEditing }) => 
       const previewUrl = URL.createObjectURL(file)
       setTroubleImagePreview(previewUrl)
       setCurrentTroubleshooting((prev) => ({ ...prev, image: previewUrl }))
+      
+      // 파일 입력 필드 초기화 (같은 파일 다시 선택할 수 있도록)
+      if (troubleFileInputRef.current) {
+        troubleFileInputRef.current.value = ''
+      }
     }
   }
 
@@ -230,67 +256,98 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, isEditing }) => 
     setError("")
 
     try {
-      // Create a FormData object for file uploads
+      // FormData 객체 생성
       const formDataObj = new FormData()
+
+      // 오늘 날짜를 YYYY-MM-DD 형식으로 가져오기
+      const today = new Date().toISOString().split("T")[0]
+
+      // 필수 필드 기본값 설정
+      const title = formData.title || "새 프로젝트" 
+      const summary = formData.summary || `${title} 프로젝트`
+      const description = formData.description || `${title}에 대한 상세 설명입니다.`
 
       // 모든 프로젝트 정보를 하나의 JSON 객체로 변환
       const projectData = {
         id: formData.id !== "new" ? formData.id : null,
-        name: formData.title,
-        summary: formData.summary,
-        description: formData.description,
+        name: title,
+        title: title,
+        summary: summary,
+        description: description,
         role: formData.role || "",
         github: formData.github || "",
         website: formData.website || "",
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: formData.startDate || today,
+        endDate: formData.endDate || today,
         technologies: formData.technologies || [],
+        // 이미지 관련 필드는 비워두고 FormData로 별도 처리
+        images: [], 
+        thumbnail: "",
         troubleshooting: formData.troubleshooting.map((item) => {
+          // imageFile 필드는 별도로 처리하므로 제외
           const { imageFile, ...rest } = item
           return {
             id: item.id !== "new" ? item.id : null,
-            title: item.title,
-            description: item.description,
+            title: item.title || "문제 해결",
+            description: item.description || "문제 해결 방법에 대한 설명입니다.",
             image: "", // 이미지는 별도로 처리
           }
         }),
       }
 
-      // JSON 문자열로 변환한 후 Blob으로 만들어 project 키에 추가
+      // JSON 문자열로 변환한 후 project 키에 추가
       const projectJson = JSON.stringify(projectData)
       formDataObj.append("project", projectJson)
 
-      // Add the thumbnail index if set
+      // 콘솔에 projectJson 출력하여 디버깅
+      console.log("Project JSON:", projectJson)
+
+      // 썸네일 인덱스 추가
       if (thumbnailIndex !== null && thumbnailIndex !== undefined) {
         formDataObj.append("thumbnailIndex", thumbnailIndex.toString())
       }
 
-      console.log("Adding image files:", selectedFiles.length)
-      // Add image files
-      selectedFiles.forEach((file) => {
-        console.log(`Adding image file: ${file.name}`)
-        formDataObj.append("images", file)
-      })
+      // 이미지 파일 추가 (새로 추가된 파일만)
+      if (selectedFiles.length > 0) {
+        console.log("Adding image files:", selectedFiles.length)
+        selectedFiles.forEach((file, index) => {
+          console.log(`Adding image file ${index}: ${file.name} (${file.size} bytes)`)
+          formDataObj.append("images", file)
+        })
+      }
 
-      // Add troubleshooting images if they exist
+      // 삭제된 이미지 URL 추가
+      if (deletedImages.length > 0) {
+        console.log("Adding deleted image URLs:", deletedImages)
+        // 삭제된 이미지 목록을 JSON 문자열로 변환하여 전송
+        formDataObj.append("deletedImages", JSON.stringify(deletedImages))
+      }
+
+      // 이미지가 없는데 썸네일 인덱스가 있으면 오류 방지
+      if (previewUrls.length === 0 && thumbnailIndex !== null) {
+        console.log("Warning: No images but thumbnail index is set. Resetting thumbnail index.")
+      }
+
+      // 트러블슈팅 이미지 처리
       const troubleImageIndices: string[] = []
       formData.troubleshooting.forEach((item, index) => {
         if (item.imageFile) {
-          console.log(`Adding troubleshooting image for index ${index}`)
+          console.log(`Adding troubleshooting image for index ${index}: ${item.imageFile.name}`)
           formDataObj.append("troubleshootingImages", item.imageFile)
           troubleImageIndices.push(index.toString())
         }
       })
 
-      // 트러블슈팅 이미지 인덱스를 한 번에 추가 (각 인덱스를 별도 파라미터로)
-      troubleImageIndices.forEach((index) => {
-        formDataObj.append("troubleshootingImageIndices", index)
-      })
+      // 트러블슈팅 이미지 인덱스를 한 번에 추가
+      if (troubleImageIndices.length > 0) {
+        console.log("Adding troubleshooting image indices:", troubleImageIndices)
+        troubleImageIndices.forEach((index) => {
+          formDataObj.append("troubleshootingImageIndices", index)
+        })
+      }
 
-      // Debug: log all FormData entries
-      console.log("FormData contents:")
-      // FormData entries를 배열로 변환해서 안전하게 로깅
-      const formDataEntries: [string, string | File | Blob][] = []
+      // FormData 내용 로깅
+      console.log("FormData 내용:")
       formDataObj.forEach((value, key) => {
         if ((value as any) instanceof File) {
           console.log(`${key}: File - ${(value as File).name} (${(value as File).size} bytes)`)
@@ -299,29 +356,26 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ initialData, isEditing }) => 
         } else {
           console.log(`${key}: ${value}`)
         }
-        formDataEntries.push([key, value as any])
       })
-
-      console.log("All form data entries:", formDataEntries.length)
 
       let result
       if (isEditing && formData.id !== "new") {
-        // Update existing project
-        console.log("Updating existing project:", formData.id)
+        // 기존 프로젝트 업데이트
+        console.log("프로젝트 업데이트:", formData.id)
         result = await updateProjectApi(formData.id, formDataObj)
       } else {
-        // Create new project
-        console.log("Creating new project")
+        // 새 프로젝트 생성
+        console.log("새 프로젝트 생성")
         result = await createProject(formDataObj)
       }
 
-      // Navigate to the project detail page or projects list
+      // 성공 시 상세 페이지나 목록으로 이동
       if (result) {
-        console.log("Project saved successfully:", result)
+        console.log("프로젝트 저장 성공:", result)
         router.push(isEditing ? `/projects/${formData.id}` : "/projects")
       }
     } catch (err) {
-      console.error("Error submitting project form:", err)
+      console.error("프로젝트 폼 제출 오류:", err)
       setError(`프로젝트 저장 중 오류가 발생했습니다: ${err instanceof Error ? err.message : "알 수 없는 오류"}`)
     } finally {
       setIsSubmitting(false)

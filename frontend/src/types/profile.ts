@@ -12,6 +12,10 @@ export interface Profile {
   educations: Education[]
   skills: Skill[]
   socials: Social[]
+  location?: string
+  github?: string
+  linkedin?: string
+  website?: string
 }
 
 export interface Career {

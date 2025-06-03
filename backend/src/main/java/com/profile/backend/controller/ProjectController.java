@@ -63,11 +63,24 @@ public class ProjectController {
             @RequestParam(value = "images", required = false) List<MultipartFile> images,
             @RequestParam(value = "thumbnailIndex", required = false) String thumbnailIndex,
             @RequestParam(value = "troubleshootingImages", required = false) List<MultipartFile> troubleshootingImages,
-            @RequestParam(value = "troubleshootingImageIndices", required = false) List<String> troubleshootingImageIndices
+            @RequestParam(value = "troubleshootingImageIndices", required = false) List<String> troubleshootingImageIndices,
+            @RequestParam(value = "deletedImages", required = false) String deletedImagesJson
     ) throws IOException {
         ProjectDto projectDto = objectMapper.readValue(projectJson, ProjectDto.class);
         Integer thumbIndex = thumbnailIndex != null ? Integer.parseInt(thumbnailIndex) : null;
-        return ResponseEntity.ok(projectService.updateProjectWithFiles(id, projectDto, images, thumbIndex, troubleshootingImages, troubleshootingImageIndices));
+        
+        // 삭제된 이미지 목록 처리
+        List<String> deletedImages = null;
+        if (deletedImagesJson != null && !deletedImagesJson.isEmpty()) {
+            try {
+                deletedImages = objectMapper.readValue(deletedImagesJson, List.class);
+                System.out.println("삭제할 이미지 목록 받음: " + deletedImages);
+            } catch (Exception e) {
+                System.err.println("삭제된 이미지 목록 파싱 오류: " + e.getMessage());
+            }
+        }
+        
+        return ResponseEntity.ok(projectService.updateProjectWithFiles(id, projectDto, images, thumbIndex, troubleshootingImages, troubleshootingImageIndices, deletedImages));
     }
     
     @DeleteMapping("/{id}")

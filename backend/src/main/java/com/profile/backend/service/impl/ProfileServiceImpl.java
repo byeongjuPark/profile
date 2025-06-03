@@ -6,6 +6,7 @@ import com.profile.backend.exception.ResourceNotFoundException;
 import com.profile.backend.repository.ProfileRepository;
 import com.profile.backend.service.ProfileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +22,9 @@ import java.util.stream.Collectors;
 public class ProfileServiceImpl implements ProfileService {
 
     private final ProfileRepository profileRepository;
+    
+    @Value("${app.upload.image-dir}")
+    private String uploadDir;
     
     @Override
     public ProfileDto getProfile(Long id) {
@@ -399,7 +403,7 @@ public class ProfileServiceImpl implements ProfileService {
         profile.setAddress(profileDto.getAddress());
         
         // 이미지 처리
-        if (!imageFile.isEmpty()) {
+        if (imageFile != null && !imageFile.isEmpty()) {
             String fileName = saveImage(imageFile);
             profile.setImage(fileName);
         }
@@ -410,10 +414,6 @@ public class ProfileServiceImpl implements ProfileService {
 
     // 이미지 저장 helper 메서드
     private String saveImage(MultipartFile file) throws IOException {
-        // 파일 저장을 위한 절대 경로 설정
-        String userHome = System.getProperty("user.home");
-        String uploadDir = userHome + File.separator + "profile-app-uploads" + File.separator + "images";
-        
         // 디렉토리가 없으면 생성
         File directory = new File(uploadDir);
         if (!directory.exists()) {
